@@ -1,0 +1,30 @@
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+    secrets:
+      - jwt_private_key
+      - jwt_public_key
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:7
+    container_name: architectos-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+secrets:
+  jwt_private_key:
+    file: ./secrets/jwt_private_key.pem
+  jwt_public_key:
+    file: ./secrets/jwt_public_key.pem
+
+volumes:
+  mongo_data:
