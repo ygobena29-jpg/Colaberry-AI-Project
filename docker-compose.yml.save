@@ -1,0 +1,32 @@
+services:
+  api:
+    build: ./backend
+    secrets:
+      - jwt_private_key
+      - jwt_public_key
+
+secrets:
+  jwt_private_key:
+    file: ./secrets/jwt_private_key.pem
+  jwt_public_key:
+    file: ./secrets/jwt_public_key.pem
+
+nano docker-compose.yml
+services:
+  api:
+    build: ./backend
+    ports:
+      - "8080:8080"
+    secrets:
+      - jwt_private_key
+      - jwt_public_key
+
+secrets:
+  jwt_private_key:
+    file: ./secrets/jwt_private_key.pem
+  jwt_public_key:
+    file: ./secrets/jwt_public_key.pem
+
+cat docker-compose.yml
+
+cat docker-compose.yml
