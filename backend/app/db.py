@@ -11,6 +11,7 @@ async def connect_to_mongo():
     global client, database
     client = AsyncIOMotorClient(MONGO_URL)
     database = client["architectos"]
+    await database["users"].create_index("email", unique=True)
     print("Connected to MongoDB")
 
 
