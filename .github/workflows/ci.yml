@@ -19,6 +19,14 @@ jobs:
       - name: Install dependencies
         run: pip install -r backend/requirements.txt pytest
 
+      - name: Generate temporary RSA keypair for JWT tests
+        run: |
+          openssl genrsa -out private.pem 2048
+          openssl rsa -in private.pem -pubout -out public.pem
+
       - name: Run tests
         working-directory: backend
+        env:
+          JWT_PRIVATE_KEY_PATH: ${{ github.workspace }}/private.pem
+          JWT_PUBLIC_KEY_PATH: ${{ github.workspace }}/public.pem
         run: pytest

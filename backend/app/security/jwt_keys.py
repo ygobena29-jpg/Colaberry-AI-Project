@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -8,8 +9,8 @@ from cryptography.hazmat.primitives import serialization
 
 @lru_cache(maxsize=1)
 def load_rsa_keys(
-    private_key_path: str = "/run/secrets/jwt_private_key",
-    public_key_path: str = "/run/secrets/jwt_public_key",
+    private_key_path: str = os.getenv("JWT_PRIVATE_KEY_PATH", "/run/secrets/jwt_private_key"),
+    public_key_path: str = os.getenv("JWT_PUBLIC_KEY_PATH", "/run/secrets/jwt_public_key"),
 ):
     """
     Loads RS256 keypair from Docker secrets.
