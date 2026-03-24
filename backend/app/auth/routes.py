@@ -1,12 +1,11 @@
 import os
-
 from typing import Any, Dict
 
 from pymongo.errors import DuplicateKeyError
-
 from fastapi import APIRouter, Depends, HTTPException
+
+import app.db as db_module
 from app.models.user import UserCreate
-from app.db import database
 from app.security.password import hash_password, verify_password
 from app.security.jwt_tokens import issue_access_token
 from app.auth.dependencies import get_current_user
@@ -17,7 +16,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 @router.post("/register")
 async def register(user: UserCreate):
-    existing = await database.users.find_one({"email": user.email})
+    existing = await db_module.database.users.find_one({"email": user.email})
 
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -27,11 +26,11 @@ async def register(user: UserCreate):
     user_doc = {
         "email": user.email,
         "hashed_password": hashed,
-        "roles": ["User"]
+        "roles": ["User"],
     }
 
     try:
-        await database.users.insert_one(user_doc)
+        await db_module.database.users.insert_one(user_doc)
     except DuplicateKeyError:
         raise HTTPException(status_code=400, detail="Email already registered")
 
@@ -40,7 +39,7 @@ async def register(user: UserCreate):
 
 @router.post("/login")
 async def login(user: UserCreate):
-    record = await database.users.find_one({"email": user.email})
+    record = await db_module.database.users.find_one({"email": user.email})
 
     if not record:
         raise HTTPException(status_code=401, detail="Invalid credentials")

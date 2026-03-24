@@ -9,11 +9,13 @@ from app.db import connect_to_mongo, close_mongo_connection
 import app.db as db_module
 from app.security.jwt_tokens import issue_access_token, verify_access_token
 from app.auth.routes import router as auth_router
+from app.projects.routes import router as projects_router
 
 
 app = FastAPI(title="Colaberry AI Project - Slice 1 (Auth + DB Foundation)")
 
 app.include_router(auth_router)
+app.include_router(projects_router)
 
 
 @app.on_event("startup")

@@ -10,6 +10,13 @@ class ProjectCreate(BaseModel):
     tags: List[str] = []
 
 
+class ProjectUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=3)
+    description: str | None = None
+    tags: List[str] | None = None
+    status: str | None = None
+
+
 class ProjectInDB(BaseModel):
     id: str
     name: str
