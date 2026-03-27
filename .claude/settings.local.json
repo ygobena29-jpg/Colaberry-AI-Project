@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose:*)",
+      "Bash(curl -s -X POST \"http://localhost:8080/auth/register\" -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"user8@example.com\"\",\"\"password\"\":\"\"StrongPass123!\"\"}')",
+      "Bash(python -m pytest tests/ -v)"
+    ]
+  }
+}

@@ -1,74 +1,66 @@
-import os
-from typing import Any, Dict
-
-from pymongo.errors import DuplicateKeyError
-from fastapi import APIRouter, Depends, HTTPException
-
-import app.db as db_module
-from app.models.user import UserCreate
-from app.security.password import hash_password, verify_password
-from app.security.jwt_tokens import issue_access_token
-from app.auth.dependencies import get_current_user
-from app.auth.rbac import require_roles
-
-router = APIRouter(prefix="/auth", tags=["auth"])
+from fastapi import HTTPException
+from bson import ObjectId
 
 
-@router.post("/register")
-async def register(user: UserCreate):
-    existing = await db_module.database.users.find_one({"email": user.email})
+@router.patch("/{project_id}", response_model=ProjectInDB)
+async def update_project(
+    project_id: str,
+    updates: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    user_id = current_user["sub"]
 
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    hashed = hash_password(user.password)
-
-    user_doc = {
-        "email": user.email,
-        "hashed_password": hashed,
-        "roles": ["User"],
-    }
-
-    try:
-        await db_module.database.users.insert_one(user_doc)
-    except DuplicateKeyError:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    return {"status": "user_created"}
-
-
-@router.post("/login")
-async def login(user: UserCreate):
-    record = await db_module.database.users.find_one({"email": user.email})
-
-    if not record:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    if not verify_password(user.password, record["hashed_password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
-
-    issuer = os.getenv("JWT_ISSUER", "local-nexus-auth")
-    audience = os.getenv("JWT_AUDIENCE", "nexus-api")
-    ttl = int(os.getenv("JWT_ACCESS_TTL_MINUTES", "15"))
-
-    token = issue_access_token(
-        user_id=str(record["_id"]),
-        org_id=str(record.get("org_id", "")),
-        roles=record.get("roles", ["User"]),
-        issuer=issuer,
-        audience=audience,
-        ttl_minutes=ttl,
-        email=record["email"],
+    existing = await db_module.database["projects"].find_one(
+        {"_id": ObjectId(project_id)}
     )
 
-    return {"access_token": token, "token_type": "bearer"}
+    if not existing:
+        raise HTTPException(status_code=404, detail="Project not found")
 
+    if existing["owner_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
 
-@router.get("/me")
-def me(current_user: Dict[str, Any] = Depends(get_current_user)):
-    return {"user": current_user}
+    updates["updated_at"] = datetime.now(timezone.utc)
 
+    await db_module.database["projects"].update_one(
+        {"_id": ObjectId(project_id)},
+        {"$set": updates},
+    )
 
-@router.get("/admin-test")
-def admin_test(current_user: Dict[str, Any] = Depends(require_roles(["Admin"]))):
-    return {"message": "admin access granted"}
+    updated = await db_module.database["projects"].find_one(
+        {"_id": ObjectId(project_id)}
+    )
+
+    return ProjectInDB(
+        id=str(updated["_id"]),
+        name=updated["name"],
+        description=updated.get("description"),
+        owner_id=updated["owner_id"],
+        status=updated["status"],
+        members=updated.get("members", []),
+        tags=updated.get("tags", []),
+        created_at=updated["created_at"],
+        updated_at=updated["updated_at"],
+    )
+@router.delete("/{project_id}")
+async def delete_project(
+    project_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    user_id = current_user["sub"]
+
+    existing = await db_module.database["projects"].find_one(
+        {"_id": ObjectId(project_id)}
+    )
+
+    if not existing:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    if existing["owner_id"] != user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    await db_module.database["projects"].delete_one(
+        {"_id": ObjectId(project_id)}
+    )
+
+    return {"status": "deleted"}
