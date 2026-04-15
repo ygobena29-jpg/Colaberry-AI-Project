@@ -3,7 +3,16 @@
     "allow": [
       "Bash(docker compose:*)",
       "Bash(curl -s -X POST \"http://localhost:8080/auth/register\" -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"user8@example.com\"\",\"\"password\"\":\"\"StrongPass123!\"\"}')",
-      "Bash(python -m pytest tests/ -v)"
+      "Bash(python -m pytest tests/ -v)",
+      "Bash(python -m pytest tests/test_auth_register.py tests/test_auth_login.py -v)",
+      "Bash(curl -s http://localhost:8080/health)",
+      "Bash(python -m pytest tests/test_projects_create_list.py -v)",
+      "Bash(npm --version)",
+      "Bash(npx --version)",
+      "Read(//c/Program Files/**)",
+      "Read(//c/Program Files \\(x86\\)/**)",
+      "Bash(npm -v)",
+      "Bash(npx -v)"
     ]
   }
 }
