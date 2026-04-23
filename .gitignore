@@ -1,6 +1,9 @@
 
 # Local secrets (never commit)
 secrets/
+
+# Scratch space — never committed (per CLAUDE.md)
+tmp/
 # Python cache
 __pycache__/
 *.pyc
