@@ -1,12 +1,15 @@
 import os
+from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, EmailStr
 
 import app.db as db_module
 from app.models.user import UserCreate
 from app.security.password import hash_password, verify_password
 from app.security.jwt_tokens import issue_access_token
+from app.auth.dependencies import get_current_user
+from app.auth.rbac import require_roles
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -63,6 +66,21 @@ async def login(body: LoginRequest):
     )
 
     return TokenResponse(access_token=token)
+
+
+@router.get("/me")
+def me(current_user: Dict[str, Any] = Depends(get_current_user)):
+    return {
+        "user": {
+            "email": current_user["email"],
+            "roles": current_user.get("roles", []),
+        }
+    }
+
+
+@router.get("/admin-test")
+def admin_test(_: Dict[str, Any] = Depends(require_roles(["Admin"]))):
+    return {"message": "admin access granted"}
 
 
 @router.get("/test")
