@@ -33,6 +33,7 @@ jobs:
       - name: Run tests
         working-directory: backend
         env:
+        PYTHONPATH: .
           JWT_PRIVATE_KEY_PATH: ${{ github.workspace }}/private.pem
           JWT_PUBLIC_KEY_PATH: ${{ github.workspace }}/public.pem
         run: pytest
