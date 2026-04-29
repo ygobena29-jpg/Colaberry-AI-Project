@@ -30,10 +30,10 @@ jobs:
           openssl genrsa -out private.pem 2048
           openssl rsa -in private.pem -pubout -out public.pem
 
-      - name: Run tests
+             - name: Run tests
         working-directory: backend
         env:
-        PYTHONPATH: .
+          PYTHONPATH: .
           JWT_PRIVATE_KEY_PATH: ${{ github.workspace }}/private.pem
           JWT_PUBLIC_KEY_PATH: ${{ github.workspace }}/public.pem
-        run: pytest
+        run: pytest 
