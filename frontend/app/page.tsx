@@ -7,7 +7,7 @@ interface Project {
   name: string;
   description?: string;
   status: string;
-}
+} 
 
 // ── Inline styles ─────────────────────────────────────────────────────────────
 
@@ -318,31 +318,44 @@ export default function Home() {
   };
 
   const handleLogin = async () => {
-    
-   
-const res = await fetch("http://localhost:8080/auth/login", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/x-www-form-urlencoded",
-  },
-  body: new URLSearchParams({
-    username: email,
-    password: password,
-  }),
-});
+    try {
+      const res = await fetch("http://localhost:8080/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
 
+      const data = await res.json();
 
-    const data = await res.json();
+      
+      if (res.ok) {
+        localStorage.setItem("token", data.access_token);
+        console.log("[handleLogin] token stored:", data.access_token);
+        setIsLoggedIn(true);
+        await getProjects(data.access_token);
+      } else {
+        let errorMessage: string;
+        if (typeof data.detail === "string") {
+          errorMessage = data.detail;
+        } else if (Array.isArray(data.detail)) {
+          errorMessage = data.detail.map((e: { msg?: string }) => e.msg ?? JSON.stringify(e)).join(", ");
+        } else if (data.detail) {
+          errorMessage = JSON.stringify(data.detail);
+        } else {
+          errorMessage = JSON.stringify(data) || String(res.status);
+        }
+        alert(`Login failed: ${errorMessage}`);
+        console.log("Login failed response:", data);
+      }
 
-    if (res.ok) {
-      localStorage.setItem("token", data.access_token);
-      console.log("[handleLogin] token stored:", data.access_token);
-      setIsLoggedIn(true);
-      // Pass the fresh token directly — no localStorage timing issues
-      await getProjects(data.access_token);
-    } else {
-      alert("Login failed");
       console.log(data);
+    } catch (err) {
+      console.error("Login failed:", err);
     }
   };
 
