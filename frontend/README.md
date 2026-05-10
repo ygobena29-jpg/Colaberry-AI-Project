@@ -91,10 +91,39 @@ Built a centralized web application that:
 ## ⚙️ How to Run Locally
 
 ### 1. Clone the repository
+
 ```bash
 git clone https://github.com/YOUR_USERNAME/Colaberry-AI-Project.git
 cd Colaberry-AI-Project
 ```
+
+### 2. Generate JWT RSA keys
+
+Run this **once** from the repo root before starting the backend or any tests:
+
+```bash
+openssl genrsa -out secrets/jwt_private_key.pem 2048
+openssl rsa -in secrets/jwt_private_key.pem -pubout -out secrets/jwt_public_key.pem
+```
+
+Both files must live at `secrets/jwt_private_key.pem` and `secrets/jwt_public_key.pem` relative to the repo root. The `secrets/` directory is already in `.gitignore` — do not commit these files.
+
+### 3. Start the backend
+
+```bash
+docker compose up --build
+```
+
+Starts FastAPI on `http://localhost:8080` and MongoDB on port 27017.
+
+### 4. Start the frontend
+
+```bash
+npm install
+npm run dev
+```
+
+Opens at `http://localhost:3000`.
 
 ---
 
@@ -108,6 +137,7 @@ End-to-end tests are written with [Playwright](https://playwright.dev) and cover
 - Login stores JWT token in `localStorage`
 - Logout clears the token and returns to the login screen
 - Session persists across page refresh
+- Invalid or expired token is cleared and user is returned to the login screen
 
 **Project CRUD**
 - Create project — appears in the list immediately without a page refresh
@@ -116,10 +146,15 @@ End-to-end tests are written with [Playwright](https://playwright.dev) and cover
 
 ### Run the Tests
 
-Start the backend first, then run from the `frontend` folder:
+**One-time setup — install Chromium:**
 
 ```bash
-cd frontend
+npx playwright install chromium
+```
+
+**Prerequisite:** The FastAPI backend must be running on `http://localhost:8080` before the tests start. Start it with `docker compose up` from the repo root. Playwright auto-starts the Next.js dev server on port 3000, so you do not need to run `npm run dev` separately.
+
+```bash
 npm run test:e2e
 ```
 
@@ -128,26 +163,3 @@ To run with the interactive Playwright UI (useful for debugging):
 ```bash
 npm run test:e2e:ui
 ```
-## ✅ Automated Testing (Playwright)
-
-End-to-end tests are written with Playwright and cover the full user journey from authentication through project management.
-
-### Verified Flows
-
-#### Authentication
-- Login stores JWT token in localStorage
-- Logout clears the token and returns to the login screen
-- Session persists across page refresh
-
-#### Project CRUD
-- Create project — appears in the list immediately without a page refresh
-- Edit project name — updated name is reflected in the list
-- Delete project — confirmation dialog shown; project removed on confirm
-
-### Run the Tests
-
-Start the backend first, then run from the frontend folder:
-
-```bash
-cd frontend
-npm run test:e2e
