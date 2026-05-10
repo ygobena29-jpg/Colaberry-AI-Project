@@ -36,4 +36,63 @@ jobs:
           PYTHONPATH: .
           JWT_PRIVATE_KEY_PATH: ${{ github.workspace }}/private.pem
           JWT_PUBLIC_KEY_PATH: ${{ github.workspace }}/public.pem
-        run: pytest 
+        run: pytest
+
+  e2e:
+    needs: test
+    runs-on: ubuntu-latest
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Generate temporary RSA keypair for JWT
+        run: |
+          openssl genrsa -out private.pem 2048
+          openssl rsa -in private.pem -pubout -out public.pem
+
+      - name: Start backend
+        working-directory: backend
+        env:
+          PYTHONPATH: .
+          MONGO_URL: mongodb://localhost:27017
+          JWT_PRIVATE_KEY_PATH: ${{ github.workspace }}/private.pem
+          JWT_PUBLIC_KEY_PATH: ${{ github.workspace }}/public.pem
+        run: uvicorn app.main:app --host 0.0.0.0 --port 8080 &
+
+      - name: Wait for backend to be ready
+        run: timeout 30 bash -c 'until curl -sf http://localhost:8080/health; do sleep 1; done'
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install Playwright Chromium and system dependencies
+        working-directory: frontend
+        run: npx playwright install chromium --with-deps
+
+      - name: Run E2E tests
+        working-directory: frontend
+        env:
+          CI: "true"
+          API_URL: http://localhost:8080
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run test:e2e
