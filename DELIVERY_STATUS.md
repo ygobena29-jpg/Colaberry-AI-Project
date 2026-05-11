@@ -1,7 +1,7 @@
 # Delivery Status
 
 **Assessed against:** `directives/system_overview.md` v1.0  
-**Assessment date:** 2026-05-10 (updated 2026-05-10, README docs pass)  
+**Assessment date:** 2026-05-10 (updated 2026-05-11, criterion 2 closed)  
 **Verdict:** **Partially Delivered**
 
 ---
@@ -28,7 +28,7 @@ A web-based project management platform with secure authentication (JWT), user-s
 | Docker backend + MongoDB | `backend/Dockerfile`, `docker-compose.yml` |
 | CI (backend unit tests + Playwright E2E) | `.github/workflows/ci.yml` — `test` job runs `pytest`; `e2e` job starts backend and runs Playwright on push/PR |
 | E2E auth tests (Playwright) | `frontend/tests/auth.spec.ts` — 4 tests |
-| E2E project CRUD tests (Playwright) | `frontend/tests/projects.spec.ts` — 3 tests |
+| E2E project CRUD tests (Playwright) | `frontend/tests/projects.spec.ts` — 4 tests (includes dedicated criterion 2 assertion) |
 
 ---
 
@@ -39,7 +39,7 @@ The directive's Verification Mapping requires a passing test for each of its 8 s
 | # | Criterion | Required verification | Status |
 |---|---|---|---|
 | 1 | Login stores session token | Playwright: `auth.spec.ts` ✅ | Done |
-| 2 | Projects load automatically after login | Playwright: no standalone test; implicitly covered by edit/delete setup assertions | **Gap** |
+| 2 | Projects load automatically after login | Playwright: `projects.spec.ts` — pre-creates project via API, logs in via UI, asserts project name visible without reload ✅ | Done |
 | 3 | Create project appears immediately | Playwright: `projects.spec.ts` ✅ | Done |
 | 4 | Edit project name updates immediately | Playwright: `projects.spec.ts` ✅ | Done |
 | 5 | Delete project with confirmation | Playwright: `projects.spec.ts` ✅ | Done |
@@ -63,11 +63,11 @@ The directive's Verification Mapping requires a passing test for each of its 8 s
 | Layer | Framework | Files | Tests | Notes |
 |---|---|---|---|---|
 | Backend unit | pytest | 9 files | ~11 tests | Auth + full CRUD + RBAC — all passing in CI |
-| E2E browser | Playwright | 2 files | 7 tests | Auth (4) + CRUD (3) — Chromium only |
+| E2E browser | Playwright | 2 files | 8 tests | Auth (4) + CRUD (4) — Chromium only |
 | Frontend unit | — | — | 0 | No component or hook unit tests |
 | Edge case E2E | — | — | 0 | None written |
 
-CI runs both the pytest suite (`test` job) and the 7 Playwright E2E tests (`e2e` job, gated on `test` passing). Latest run: both jobs green.
+CI runs both the pytest suite (`test` job) and the 8 Playwright E2E tests (`e2e` job, gated on `test` passing). Latest run: both jobs green.
 
 ---
 
@@ -87,10 +87,10 @@ CI runs both the pytest suite (`test` job) and the 7 Playwright E2E tests (`e2e`
 
 **Partially Delivered**
 
-The core application — authentication, project CRUD, user isolation, Docker setup, and CI — is working and tested. Six of eight directive success criteria have passing verification. The system is demonstrably functional.
+The core application — authentication, project CRUD, user isolation, Docker setup, and CI — is working and tested. Seven of eight directive success criteria have passing verification. The system is demonstrably functional.
 
 What prevents a "Delivered" verdict:
-- Criteria 2 and 7 have no dedicated assertions (projects load after login; project *data* reloads on refresh)
+- Criterion 7 has no dedicated assertion (project *data* visible after refresh — the test checks heading and token only)
 - Three directive §5 edge cases have **no automated coverage** (empty name, empty list, network failure)
 - The "Session expired" message is a **known UI bug**: it never renders due to a React batch-update ordering issue
 - Local setup is fully documented and `scripts/test` provides one command for both suites; remaining blockers are test coverage gaps and the known UI bug below
@@ -104,8 +104,7 @@ Smallest changes that move the verdict to "Delivered":
 | Priority | Fix | Effort |
 |---|---|---|
 | 1 | **Fix "Session expired" UI bug** — move `setProjectStatus(...)` out of `{isLoggedIn && ...}` or render it unconditionally so the message is visible after auto-logout | ~30 min |
-| 2 | **Add dedicated E2E assertion: projects load after login** — in `auth.spec.ts`, pre-create a project and assert its name is visible after login without a reload (criterion 2) | ~30 min |
-| 3 | **Add dedicated E2E assertion: project data reloads on refresh** — extend the refresh test to assert at least one project name is visible after reload (criterion 7) | ~15 min |
+| 2 | **Add dedicated E2E assertion: project data reloads on refresh** — extend the refresh test in `auth.spec.ts` to pre-create a project and assert its name is visible after reload (criterion 7) | ~15 min |
+| 3 | **Add edge case E2E tests** — empty project name, empty list state, and network-failure error message (directive §5) | ~2 hours |
 | 4 | **Add frontend service to docker-compose** — add a `frontend` service using `npm run start` so the full stack starts with a single `docker compose up` | ~30 min |
-| 5 | **Add edge case E2E tests** — empty project name, empty list state, and network-failure error message (directive §5) | ~2 hours |
-| 6 | **Verify `secrets/*.pem` are in `.gitignore`** — if not, add them immediately to satisfy the "no secrets in repo" safety constraint | ~5 min |
+| 5 | **Verify `secrets/*.pem` are in `.gitignore`** — if not, add them immediately to satisfy the "no secrets in repo" safety constraint | ~5 min |
