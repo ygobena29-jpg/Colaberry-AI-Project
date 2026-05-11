@@ -78,6 +78,46 @@ test('page refresh keeps a logged-in user on the dashboard', async ({ page }) =>
   expect(token).not.toBeNull();
 });
 
+// Criterion 7: project data reloads after a page refresh (not just the dashboard heading).
+test('page refresh reloads project data for the logged-in user', async ({ page, request }) => {
+  // Acquire an API token inline so we can pre-create a project without touching the UI.
+  const loginRes = await request.post(`${API_URL}/auth/login`, {
+    data: { email: TEST_EMAIL, password: TEST_PASSWORD },
+  });
+  expect(loginRes.ok()).toBeTruthy();
+  const { access_token } = await loginRes.json();
+
+  const projectName = `E2E Refresh ${Date.now()}`;
+  const createRes = await request.post(`${API_URL}/projects/`, {
+    headers: { Authorization: `Bearer ${access_token}` },
+    data: { name: projectName, description: '', tags: [] },
+  });
+  expect(createRes.ok()).toBeTruthy();
+
+  // Log in via the UI — projects load automatically on login (criterion 2).
+  await login(page);
+  // Confirm the project is visible before the reload.
+  await expect(page.getByText(projectName)).toBeVisible();
+
+  // Register the listener BEFORE reload — useEffect calls getProjects() immediately
+  // on mount via Promise.resolve().then(), so the GET can fire before we attach.
+  const projectsAfterReload = page.waitForResponse(
+    (res) => res.url().includes('/projects/') && res.request().method() === 'GET',
+  );
+
+  await page.reload();
+
+  // Session must survive: dashboard still visible, token still in storage.
+  await expect(page.getByText('Projects', { exact: true })).toBeVisible();
+  const token = await page.evaluate(() => localStorage.getItem('token'));
+  expect(token).not.toBeNull();
+
+  // The post-reload fetch must succeed and the known project must still be visible.
+  const projectsResponse = await projectsAfterReload;
+  expect(projectsResponse.status()).toBe(200);
+  await expect(page.getByText(projectName)).toBeVisible();
+});
+
 test('invalid token is cleared and user is returned to the login screen', async ({ page }) => {
   // Register the /projects/ listener before the reload so we don't miss
   // the GET request that useEffect fires on mount.
