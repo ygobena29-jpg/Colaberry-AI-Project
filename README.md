@@ -105,6 +105,37 @@ npm run test:e2e:ui
 
 ---
 
+## 6. Run All Tests (One Command)
+
+With the backend already running on port 8080 (Step 2), run the full test suite from the repo root:
+
+```bash
+bash scripts/test
+```
+
+This runs backend pytest first, then frontend Playwright E2E. It exits with a non-zero code and stops immediately if either suite fails. Output is labelled so you can tell which suite is running:
+
+```
+================================================
+  [1/2] Backend unit tests (pytest)
+================================================
+...pytest output...
+
+================================================
+  [2/2] Frontend E2E tests (Playwright)
+  Assumes backend is running on http://localhost:8080
+================================================
+...playwright output...
+
+================================================
+  All tests passed.
+================================================
+```
+
+> **Windows:** Run from Git Bash or WSL. The script uses `#!/usr/bin/env bash` and is not compatible with plain `cmd.exe` or PowerShell.
+
+---
+
 ## CI
 
 GitHub Actions runs two jobs on every push and pull request:

@@ -79,7 +79,7 @@ CI runs both the pytest suite (`test` job) and the 7 Playwright E2E tests (`e2e`
 | **Playwright browsers not installed** | Closed | Both READMEs now have a one-time-setup step: `npx playwright install chromium`. |
 | **E2E tests require manual backend** | Closed | Both READMEs now explicitly state the FastAPI backend must be running on `http://localhost:8080` before E2E tests start, with `docker compose up` as the documented method. |
 | **Frontend absent from docker-compose** | Open | Only `api` + `mongodb` are in `docker-compose.yml`. The full stack cannot be started with a single `docker compose up`. Requires a code change, not a docs change. |
-| **No one-command test execution** | Open | Backend tests (`cd backend && pytest`) and E2E tests (`cd frontend && npm run test:e2e`) are now documented separately. No top-level `Makefile` or script unifies them. The CLAUDE.md intern-safety rule requires a single command. |
+| **No one-command test execution** | Closed | `scripts/test` runs `pytest` then `npm run test:e2e` in sequence, fails fast if either suite fails, and prints labelled section headers. Documented in root `README.md` §6. |
 
 ---
 
@@ -93,7 +93,7 @@ What prevents a "Delivered" verdict:
 - Criteria 2 and 7 have no dedicated assertions (projects load after login; project *data* reloads on refresh)
 - Three directive §5 edge cases have **no automated coverage** (empty name, empty list, network failure)
 - The "Session expired" message is a **known UI bug**: it never renders due to a React batch-update ordering issue
-- Local setup docs are now complete for key generation, Playwright install, and backend startup; but **no single command runs both test suites** (CLAUDE.md intern-safety rule not yet met)
+- Local setup is fully documented and `scripts/test` provides one command for both suites; remaining blockers are test coverage gaps and the known UI bug below
 
 ---
 
@@ -104,9 +104,8 @@ Smallest changes that move the verdict to "Delivered":
 | Priority | Fix | Effort |
 |---|---|---|
 | 1 | **Fix "Session expired" UI bug** — move `setProjectStatus(...)` out of `{isLoggedIn && ...}` or render it unconditionally so the message is visible after auto-logout | ~30 min |
-| 2 | **Add top-level one-command test runner** — add a `Makefile` or shell script at repo root that runs `cd backend && pytest` then `cd frontend && npm run test:e2e` (satisfies CLAUDE.md intern-safety rule) | ~15 min |
-| 3 | **Add dedicated E2E assertion: projects load after login** — in `auth.spec.ts`, pre-create a project and assert its name is visible after login without a reload (criterion 2) | ~30 min |
-| 4 | **Add dedicated E2E assertion: project data reloads on refresh** — extend the refresh test to assert at least one project name is visible after reload (criterion 7) | ~15 min |
-| 5 | **Add frontend service to docker-compose** — add a `frontend` service using `npm run start` so the full stack starts with a single `docker compose up` | ~30 min |
-| 6 | **Add edge case E2E tests** — empty project name, empty list state, and network-failure error message (directive §5) | ~2 hours |
-| 7 | **Verify `secrets/*.pem` are in `.gitignore`** — if not, add them immediately to satisfy the "no secrets in repo" safety constraint | ~5 min |
+| 2 | **Add dedicated E2E assertion: projects load after login** — in `auth.spec.ts`, pre-create a project and assert its name is visible after login without a reload (criterion 2) | ~30 min |
+| 3 | **Add dedicated E2E assertion: project data reloads on refresh** — extend the refresh test to assert at least one project name is visible after reload (criterion 7) | ~15 min |
+| 4 | **Add frontend service to docker-compose** — add a `frontend` service using `npm run start` so the full stack starts with a single `docker compose up` | ~30 min |
+| 5 | **Add edge case E2E tests** — empty project name, empty list state, and network-failure error message (directive §5) | ~2 hours |
+| 6 | **Verify `secrets/*.pem` are in `.gitignore`** — if not, add them immediately to satisfy the "no secrets in repo" safety constraint | ~5 min |
