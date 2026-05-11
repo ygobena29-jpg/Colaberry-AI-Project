@@ -55,6 +55,35 @@ async function login(page: import('@playwright/test').Page) {
 
 // ── Project CRUD tests ────────────────────────────────────────────────────────
 
+// Criterion 2: projects load automatically after login (no manual refresh needed).
+test('projects created before login are visible immediately after login', async ({ page, request }) => {
+  // Pre-create a known project via the API so it exists when the user logs in.
+  const projectName = `E2E AutoLoad ${Date.now()}`;
+  const createRes = await request.post(`${API_URL}/projects/`, {
+    headers: { Authorization: `Bearer ${authToken}` },
+    data: { name: projectName, description: '', tags: [] },
+  });
+  expect(createRes.ok()).toBeTruthy();
+
+  // Register the projects-fetch listener BEFORE login() is called.
+  // handleLogin calls setIsLoggedIn(true) then immediately awaits getProjects(),
+  // so the GET /projects/ fires before React re-renders the dashboard — if we
+  // register after login() the request is already gone.
+  const projectsResponsePromise = page.waitForResponse(
+    (res) => res.url().includes('/projects/') && res.request().method() === 'GET',
+  );
+
+  // Log in via the UI — handleLogin fetches projects automatically on success.
+  await login(page);
+
+  // Confirm the automatic fetch succeeded (guards against a silent 200-but-empty response).
+  const projectsResponse = await projectsResponsePromise;
+  expect(projectsResponse.status()).toBe(200);
+
+  // The pre-created project must be visible without any reload or "Refresh" click.
+  await expect(page.getByText(projectName)).toBeVisible();
+});
+
 test('create project appears in list immediately', async ({ page }) => {
   await login(page);
 
