@@ -1,7 +1,7 @@
 # Delivery Status
 
 **Assessed against:** `directives/system_overview.md` v1.0  
-**Assessment date:** 2026-05-10 (updated 2026-05-11, all 8 criteria now verified)  
+**Assessment date:** 2026-05-10 (updated 2026-05-11, criterion 8 fully verified)  
 **Verdict:** **Partially Delivered**
 
 ---
@@ -23,7 +23,7 @@ A web-based project management platform with secure authentication (JWT), user-s
 | Soft delete with list exclusion | `status: "deleted"` pattern; list route filters `{"status": {"$ne": "deleted"}}` |
 | Delete confirmation dialog | `deleteProject()` calls `confirm(...)` before DELETE; E2E test verifies |
 | Session persistence on refresh | `useEffect` in `page.tsx` reads localStorage token on mount |
-| Auto-logout on 401 | `getProjects()` clears token and calls `setIsLoggedIn(false)` on 401 |
+| Auto-logout on 401 | `getProjects()` clears token, sets `sessionMessage`, and calls `setIsLoggedIn(false)` on 401; dedicated `sessionMessage` state renders the message in the login card |
 | RBAC (admin vs. user) | `test_auth_admin_rbac.py`, `test_auth_admin_access.py` |
 | Docker backend + MongoDB | `backend/Dockerfile`, `docker-compose.yml` |
 | CI (backend unit tests + Playwright E2E) | `.github/workflows/ci.yml` — `test` job runs `pytest`; `e2e` job starts backend and runs Playwright on push/PR |
@@ -45,9 +45,7 @@ All 8 directive success criteria now have passing verification. Status per crite
 | 5 | Delete project with confirmation | Playwright: `projects.spec.ts` ✅ | Done |
 | 6 | Logout clears token and shows login screen | Playwright: `auth.spec.ts` ✅ | Done |
 | 7 | Refresh keeps user on dashboard | Playwright: `auth.spec.ts` — pre-creates project via API, reloads, asserts dashboard + token + project name still visible ✅ | Done |
-| 8 | Expired/invalid token → login screen + message | Playwright: `auth.spec.ts` — injects invalid JWT, reloads, asserts 401 from backend, verifies login screen and token removal ✅ | Done* |
-
-**Note on criterion 8 (\*):** The `getProjects` 401 handler calls `setProjectStatus("Session expired. Please log in again.")`, but that `<p>` element is inside `{isLoggedIn && (...)}`. Because `setIsLoggedIn(false)` fires in the same React batch, the section unmounts before the message renders. The E2E test asserts the login screen appears and the token is cleared — it does not assert the message text, which is a known UI bug.
+| 8 | Expired/invalid token → login screen + message | Playwright: `auth.spec.ts` — injects invalid JWT via `addInitScript`, asserts 401 from backend, verifies login screen, visible "Session expired. Please log in again." message, and token removal ✅ | Done |
 
 **Edge case tests (directive §5) — all missing from E2E:**
 
@@ -67,7 +65,7 @@ All 8 directive success criteria now have passing verification. Status per crite
 | Frontend unit | — | — | 0 | No component or hook unit tests |
 | Edge case E2E | — | — | 0 | None written |
 
-CI runs both the pytest suite (`test` job) and the 9 Playwright E2E tests (`e2e` job, gated on `test` passing). Latest run: both jobs green.
+CI runs both the pytest suite (`test` job) and the 9 Playwright E2E tests (`e2e` job, gated on `test` passing). Latest run: both jobs green. The criterion 8 `auth.spec.ts` test now asserts the "Session expired" message text and passes reliably in the full suite.
 
 ---
 
@@ -91,7 +89,6 @@ The core application — authentication, project CRUD, user isolation, Docker se
 
 What prevents a "Delivered" verdict:
 - Three directive §5 edge cases have **no automated coverage** (empty project name, empty list state, network failure message) — these are explicitly required verifications in the directive
-- Criterion 8 is Done* — the "Session expired" message is a **known UI bug**: it never renders due to a React batch-update ordering issue, so the criterion's message-visibility half is unverified
 - Frontend is absent from `docker-compose.yml` — the full stack cannot start with a single command
 
 ---
@@ -102,7 +99,6 @@ Smallest changes that move the verdict to "Delivered":
 
 | Priority | Fix | Effort |
 |---|---|---|
-| 1 | **Fix "Session expired" UI bug** — move `setProjectStatus(...)` out of `{isLoggedIn && ...}` or render it unconditionally so the message is visible after auto-logout | ~30 min |
-| 2 | **Add edge case E2E tests** — empty project name, empty list state, and network-failure error message (directive §5) | ~2 hours |
-| 3 | **Add frontend service to docker-compose** — add a `frontend` service using `npm run start` so the full stack starts with a single `docker compose up` | ~30 min |
-| 4 | **Verify `secrets/*.pem` are in `.gitignore`** — if not, add them immediately to satisfy the "no secrets in repo" safety constraint | ~5 min |
+| 1 | **Add edge case E2E tests** — empty project name, empty list state, and network-failure error message (directive §5) | ~2 hours |
+| 2 | **Add frontend service to docker-compose** — add a `frontend` service using `npm run start` so the full stack starts with a single `docker compose up` | ~30 min |
+| 3 | **Verify `secrets/*.pem` are in `.gitignore`** — if not, add them immediately to satisfy the "no secrets in repo" safety constraint | ~5 min |
