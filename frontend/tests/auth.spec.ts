@@ -119,37 +119,31 @@ test('page refresh reloads project data for the logged-in user', async ({ page, 
 });
 
 test('invalid token is cleared and user is returned to the login screen', async ({ page }) => {
-  // Register the /projects/ listener before the reload so we don't miss
-  // the GET request that useEffect fires on mount.
-  const projectsResponsePromise = page.waitForResponse(
-    (res) => res.url().includes('/projects/') && res.request().method() === 'GET',
-  );
-
-  // Inject a syntactically valid but cryptographically invalid JWT.
-  // The backend's RS256 verifier will reject it and return 401.
-  await page.evaluate(() => {
+  // addInitScript injects before any page JS runs, so the fake token is in
+  // localStorage when useEffect reads it on mount. page.evaluate + page.reload()
+  // loses the token because the reload lands on a fresh browser storage context.
+  await page.addInitScript(() => {
     localStorage.setItem(
       'token',
       'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJmYWtlIn0.invalidsignature',
     );
   });
 
-  // Reload so useEffect reads the fake token and calls getProjects().
-  await page.reload();
+  // Register before navigation so the GET fired by useEffect on mount is captured.
+  const projectsResponsePromise = page.waitForResponse(
+    (res) => res.url().includes('/projects/') && res.request().method() === 'GET',
+  );
 
-  // Confirm the backend rejected the token.
+  await page.goto('/');
+
+  // Confirm the backend rejected the invalid token with 401.
   const response = await projectsResponsePromise;
   expect(response.status()).toBe(401);
 
-  // The app must return to the login screen.
+  // The app must clear the token, return to the login screen, and show the message.
   await expect(page.getByText('Sign In')).toBeVisible();
+  await expect(page.getByText('Session expired. Please log in again.')).toBeVisible();
 
-  // NOTE: The app calls setProjectStatus("Session expired. Please log in again.")
-  // but that text lives inside {isLoggedIn && (...)} which is unmounted when
-  // setIsLoggedIn(false) fires in the same React batch — so it is never rendered.
-  // This is a known UI gap documented in DELIVERY_STATUS.md.
-
-  // The invalid token must have been removed from localStorage.
   const token = await page.evaluate(() => localStorage.getItem('token'));
   expect(token).toBeNull();
 });

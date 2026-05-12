@@ -147,6 +147,7 @@ export default function Home() {
   const [password, setPassword] = useState("");
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectStatus, setProjectStatus] = useState("");
+  const [sessionMessage, setSessionMessage] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const getProjects = async (tokenFromLogin?: string) => {
@@ -178,7 +179,7 @@ export default function Home() {
           localStorage.removeItem("token");
           setIsLoggedIn(false);
           setProjects([]);
-          setProjectStatus("Session expired. Please log in again.");
+          setSessionMessage("Session expired. Please log in again.");
         } else {
           setProjectStatus(`Error ${res.status}: ${data.detail ?? "Unknown error"}`);
         }
@@ -315,6 +316,7 @@ export default function Home() {
     setEmail("");
     setPassword("");
     setProjectStatus("");
+    setSessionMessage("");
   };
 
   const handleLogin = async () => {
@@ -336,6 +338,7 @@ export default function Home() {
       if (res.ok) {
         localStorage.setItem("token", data.access_token);
         console.log("[handleLogin] token stored:", data.access_token);
+        setSessionMessage("");
         setIsLoggedIn(true);
         await getProjects(data.access_token);
       } else {
@@ -388,6 +391,9 @@ export default function Home() {
             <button onClick={handleLogin} style={styles.btnPrimary}>
               Login
             </button>
+            {sessionMessage && (
+              <p style={{ ...styles.statusText, marginTop: "12px" }}>{sessionMessage}</p>
+            )}
           </div>
         )}
 
